@@ -1,0 +1,15 @@
+{
+  "name": "air-quality-intelligence-system",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install --legacy-peer-deps",
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run dev",
+    "ml-service": "cd ml-service && python main.py",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\" \"npm run ml-service\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
