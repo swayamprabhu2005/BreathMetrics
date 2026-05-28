@@ -59,3 +59,11 @@ db/
 *.sw?
 .DS_Store
 Thumbs.db
+
+# Local development overrides and temporary files
+.env.local
+.env.*.local
+local_settings.json
+*.tmp
+*.bak
+

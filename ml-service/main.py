@@ -79,28 +79,45 @@ class PredictionOutput(BaseModel):
 @app.post("/predict", response_model=PredictionOutput)
 async def predict(data: PredictionInput):
     try:
-        # Prepare input for source and aqi models
-        features = pd.DataFrame([[
-            data.pm25, data.pm10, data.no2, data.co, data.o3,
-            data.temperature, data.wind_speed, data.hour
-        ]], columns=['pm25', 'pm10', 'no2', 'co', 'o3', 'temperature', 'wind_speed', 'hour'])
+        from datetime import datetime
+        now = datetime.now()
 
-        # Scale features if scaler exists
-        if 'scaler' in models:
-            features_scaled = models['scaler'].transform(features.values)
-        else:
-            features_scaled = features.values
+        # Define all 23 features expected by the Pipeline models
+        feature_names = [
+            'PM2.5', 'PM10', 'NO', 'NO2', 'NOx', 'NH3', 'CO', 'SO2', 'O3', 'Benzene', 'Toluene',
+            'Xylene', 'hour', 'day', 'month', 'day_of_week', 'rolling_mean_PM2.5_w3',
+            'rolling_mean_PM2.5_w6', 'PM2.5_lag1', 'PM2.5_lag2', 'AQI_lag1', 'AQI_lag2',
+            'StationId'
+        ]
+
+        # Create DataFrame with NaN for unknown features so the SimpleImputer in the pipeline handles them
+        features_df = pd.DataFrame(columns=feature_names)
+        row = {name: np.nan for name in feature_names}
+        
+        # Populate values we have
+        row['PM2.5'] = float(data.pm25)
+        row['PM10'] = float(data.pm10)
+        row['NO2'] = float(data.no2)
+        row['CO'] = float(data.co)
+        row['O3'] = float(data.o3)
+        row['hour'] = int(data.hour)
+        row['day'] = int(now.day)
+        row['month'] = int(now.month)
+        row['day_of_week'] = int(now.weekday())
+        row['StationId'] = 'AP001'  # Fallback StationId (any category, handled by handle_unknown='ignore' in OneHotEncoder)
+
+        features_df.loc[0] = row
 
         # Predict current AQI
         if 'aqi_model' in models:
-            current_aqi = int(models['aqi_model'].predict(features_scaled)[0])
+            current_aqi = int(models['aqi_model'].predict(features_df)[0])
         else:
             # Fallback basic AQI calculation
             current_aqi = int(data.pm25 * 2 + data.pm10 * 1.5 + data.no2 * 1.2)
 
         # Predict Source
         if 'source_model' in models:
-            source_probs = models['source_model'].predict_proba(features_scaled)[0]
+            source_probs = models['source_model'].predict_proba(features_df)[0]
             source_idx = np.argmax(source_probs)
             confidence = float(source_probs[source_idx])
             
@@ -113,20 +130,8 @@ async def predict(data: PredictionInput):
             predicted_source = "Vehicular"
             confidence = 0.85
 
-        # Predict Future AQI (LSTM)
-        future_aqi = []
-        if 'lstm_model' in models and 'lstm_scaler' in models:
-            # Simplified LSTM prediction logic for 3 future steps
-            # In a real scenario, this would involve a sequence of previous data
-            # Here we'll mock the sequence with current data for demonstration
-            mock_sequence = np.repeat(features_scaled, 24, axis=0).reshape(1, 24, -1)
-            lstm_pred = models['lstm_model'].predict(mock_sequence)
-            # Inverse scale and get next 3 values
-            # This is a simplification; actual logic depends on model output shape
-            future_aqi = [int(current_aqi + i * 5) for i in range(1, 4)]
-        else:
-            # Fallback future prediction
-            future_aqi = [int(current_aqi + 10), int(current_aqi + 20), int(current_aqi + 30)]
+        # Predict Future AQI (LSTM) - Fallback is used
+        future_aqi = [int(current_aqi + 10), int(current_aqi + 20), int(current_aqi + 30)]
 
         return PredictionOutput(
             predicted_source=predicted_source,
@@ -144,5 +149,5 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 8002))
     uvicorn.run(app, host="0.0.0.0", port=port)

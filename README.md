@@ -9,7 +9,7 @@ A complete production-ready full-stack web application for real-time pollution m
   - Current AQI prediction & classification
   - Future AQI forecasting (Deep Learning based time-series forecasting)
 - **Interactive Dashboard**:
-  - Beautiful glassmorphism UI with custom SVG rendering for pristine charts (No external watermarks).
+  - Beautiful Premium Cool Slate-Blue & Sage Green UI with custom SVG rendering for pristine charts (No external watermarks).
   - Leaflet.js geospatial mapping with dynamic AQI hotspot area highlighting.
   - Smart AI Recommendation engine based on primary pollution sources.
   - Evacuation alert overlay for hazardous AQI levels (>200).

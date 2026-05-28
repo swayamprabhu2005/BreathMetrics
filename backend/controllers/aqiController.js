@@ -1,7 +1,7 @@
 const axios = require('axios');
 const AQIData = require('../models/AQIData');
 
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000/predict';
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8002/predict';
 const OPENAQ_API_URL = 'https://api.openaq.org/v2/latest';
 const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
 
@@ -78,7 +78,11 @@ exports.getLiveData = async (req, res) => {
       recommendation: getRecommendation(prediction.predicted_source)
     });
 
-    await aqiData.save();
+    try {
+      await aqiData.save();
+    } catch (saveError) {
+      console.warn("MongoDB save failed, but returning data anyway:", saveError.message);
+    }
     res.json(aqiData);
 
   } catch (error) {
